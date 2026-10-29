@@ -2,6 +2,9 @@
 
 <h1 align="center">Backupthing</h1>
 
+>I made Backupthing for personal use, so I could save my Proton Drive space by adding a compression layer. Made this public hoping it would be helpful for someone. I use this as a daily driver so I'll keep
+>working on this actively, although other platform or cloud drive support won't be added unless I get some PRs. :)
+
 Back up the photos and videos your phone syncs to your Linux PC, **compressed**, to
 [Proton Drive](https://proton.me/drive). Photos become AVIF and videos become AV1, tuned to look the same
 as the originals while usually taking a third to a half of the space. Only the compressed copies are
