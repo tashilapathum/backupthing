@@ -1,0 +1,5 @@
+-- 0.1.x → bandwidth caps: bytes uploaded per local day.
+CREATE TABLE upload_usage (
+    day TEXT NOT NULL PRIMARY KEY,
+    bytes INTEGER NOT NULL DEFAULT 0
+);

@@ -1,0 +1,42 @@
+Backupthing bundles the following third-party software.
+
+htmx 2.0.11 - src/main/resources/static/htmx.min.js
+https://github.com/bigskysoftware/htmx
+Zero-Clause BSD
+
+  Permission to use, copy, modify, and/or distribute this software for
+  any purpose with or without fee is hereby granted.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+  WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE
+  FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
+  DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+  OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Geist and Geist Mono 1.8.2 - src/main/resources/static/fonts/
+https://github.com/vercel/geist-font
+SIL Open Font License 1.1 (full text in src/main/resources/static/fonts/OFL.txt)
+
+Phosphor Icons (core 2.1.1) - src/main/resources/static/icons/
+https://github.com/phosphor-icons/core
+MIT License (full text in src/main/resources/static/icons/LICENSE)
+
+Java libraries in the release archive (lib/), with their licenses:
+
+  Apache License 2.0
+    Kotlin standard library and kotlin-reflect, kotlinx.coroutines, kotlinx.serialization,
+    kotlinx.datetime, kotlinx.io, kotlinx.html (JetBrains); Ktor (JetBrains);
+    JetBrains annotations; SQLDelight runtime and drivers (Cash App);
+    Clikt and Mordant (AJ Alt); Typesafe Config (Lightbend); sqlite-jdbc (Xerial,
+    which bundles SQLite, public domain)
+  MIT License
+    ktoml (Andrey Kuleshov and contributors); colormath (AJ Alt); SLF4J API (QOS.ch)
+  Eclipse Public License 1.0 or LGPL 2.1 (dual)
+    logback-classic, logback-core (QOS.ch)
+  LGPL 2.1 or later, or Apache License 2.0 (dual)
+    JNA (Java Native Access)
+
+Each library's license text is available from its project; versions are listed in
+gradle/libs.versions.toml and the jar file names.

@@ -1,0 +1,6 @@
+/* Backupthing Waybar module — classes come from /api/waybar */
+#custom-backupthing.running { color: #f58fd2; }
+#custom-backupthing.login,
+#custom-backupthing.offline,
+#custom-backupthing.warning { color: #ffc078; }
+#custom-backupthing.down { color: #868e96; }

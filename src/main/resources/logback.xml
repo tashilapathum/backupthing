@@ -1,0 +1,12 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- journald adds its own timestamps; Main sets BT_LOG_PATTERN without one when JOURNAL_STREAM is set. -->
+            <pattern>${BT_LOG_PATTERN:-%d{HH:mm:ss.SSS} %-5level %logger{20} - %msg%n}</pattern>
+        </encoder>
+    </appender>
+    <logger name="io.github.tashilapathum.backupthing" level="${BACKUPTHING_LOG_LEVEL:-INFO}"/>
+    <root level="WARN">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libavif-bin imagemagick exiv2
+      - name: Version from tag
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Test and build
+        run: ./gradlew spotlessCheck test distTar -PreleaseVersion=${{ steps.v.outputs.version }}
+      - name: Checksum
+        working-directory: build/distributions
+        run: sha256sum backupthing-${{ steps.v.outputs.version }}.tar.gz > backupthing-${{ steps.v.outputs.version }}.tar.gz.sha256
+      - name: Release notes from CHANGELOG
+        run: |
+          awk -v v="${{ steps.v.outputs.version }}" '
+            $0 ~ "^## " v { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || echo "See CHANGELOG.md" > notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Backupthing ${{ steps.v.outputs.version }}" \
+            --notes-file notes.md \
+            build/distributions/backupthing-${{ steps.v.outputs.version }}.tar.gz \
+            build/distributions/backupthing-${{ steps.v.outputs.version }}.tar.gz.sha256

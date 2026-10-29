@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Backupthing
+GenericName=Photo and video backup
+Comment=Open the Backupthing dashboard
+Exec=backupthing open
+Icon=backupthing
+Terminal=false
+Categories=Utility;Archiving;
+Keywords=backup;proton;drive;photos;videos;
+StartupNotify=false

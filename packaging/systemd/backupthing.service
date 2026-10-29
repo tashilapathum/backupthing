@@ -1,0 +1,31 @@
+# Backupthing as a systemd *user* service (it needs your session keyring for the Proton login).
+#
+#   systemctl --user enable --now backupthing
+#   journalctl --user -u backupthing -f
+#
+# From the release tarball, ./install.sh installs this unit with ExecStart pointing at
+# ~/.local/opt/backupthing and starts it; nothing to do by hand.
+
+[Unit]
+Description=Backupthing: compress phone media and back it up to Proton Drive
+Documentation=https://github.com/tashilapathum/backupthing
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/backupthing serve
+# The JVM exits with 143 after a clean SIGTERM shutdown.
+SuccessExitStatus=143
+# A small heap is plenty: encoding happens in ffmpeg/avifenc, not in the JVM.
+Environment=BACKUPTHING_OPTS=-Xmx256m -XX:+UseSerialGC
+Restart=on-failure
+RestartSec=30
+# Encoding is heavy; keep the desktop responsive.
+Nice=10
+IOSchedulingClass=idle
+# Leaves time for a running encode/upload to be cancelled and recorded cleanly.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

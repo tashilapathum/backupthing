@@ -1,0 +1,15 @@
+TypeError: Unable to connect. Is the computer able to access the url?
+  path: "https://drive-api.proton.me/drive/v2/shares/my-files",
+ errno: 0,
+  code: "ConnectionRefused"
+
+
+      at rot (src/cli/run.ts:93:13)
+      at iSe (src/cli/run.ts:26:9)
+      at async aSe (src/cli/index.ts:29:15)
+Error details:
+{
+  code: 'ConnectionRefused',
+  path: 'https://drive-api.proton.me/drive/v2/shares/my-files',
+  errno: 0
+}

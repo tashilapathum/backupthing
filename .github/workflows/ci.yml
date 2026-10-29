@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libavif-bin imagemagick exiv2
+      - name: Spotless
+        run: ./gradlew spotlessCheck
+      - name: Test
+        run: ./gradlew test
+      - name: Dependency report
+        run: ./gradlew -q installDist && build/install/backupthing/bin/backupthing check || true

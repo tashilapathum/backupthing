@@ -1,0 +1,28 @@
+// Backupthing Waybar modules. Merge into your Waybar config and add "custom/backupthing" to a modules list.
+// Icons use a Nerd Font; replace them if your bar font has none.
+{
+  // Optional logo next to the status. Path for the package; for the tarball use
+  // <unpacked folder>/share/waybar/backupthing.svg. Put "image#backupthing" before "custom/backupthing".
+  "image#backupthing": {
+    "path": "/usr/share/backupthing/waybar/backupthing.svg",
+    "size": 16,
+    "on-click": "xdg-open http://127.0.0.1:8787",
+    "tooltip": false
+  },
+  "custom/backupthing": {
+    "exec": "curl -sf --max-time 2 http://127.0.0.1:8787/api/waybar || echo '{\"text\":\"\",\"alt\":\"down\",\"class\":\"down\",\"tooltip\":\"Backupthing is not running\"}'",
+    "return-type": "json",
+    "interval": 5,
+    "format": "{icon} {}",
+    "format-icons": {
+      "idle": "󰅟",
+      "running": "󰕒",
+      "login": "󰌾",
+      "offline": "󰅛",
+      "warning": "󰀦",
+      "down": "󰅤"
+    },
+    "on-click": "xdg-open http://127.0.0.1:8787",
+    "tooltip": true
+  }
+}
