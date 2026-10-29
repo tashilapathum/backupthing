@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-10-30
 
 ### Staging limit
 - Compression no longer runs ahead of uploads without bound. It pauses while 10 compressed files wait to upload
