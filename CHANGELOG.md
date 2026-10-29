@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Staging limit
+- Compression no longer runs ahead of uploads without bound. It pauses while 10 compressed files wait to upload
+  (Settings → Uploads → Staging limit: a number of files, a size, or no limit) and resumes as uploads finish.
+- When uploads can't continue (sign-in needed, offline, upload cap), compression stops once staging is full; the
+  remaining files wait for the next run instead of filling the disk. `run --dry-run` respects the limit too.
+
 ## 0.2.1 - 2026-10-29
 
 ### Fixes

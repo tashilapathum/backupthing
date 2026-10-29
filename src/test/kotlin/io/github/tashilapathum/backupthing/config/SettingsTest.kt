@@ -212,4 +212,29 @@ class SettingsTest {
         )
         assertEquals(emptyList(), errors(BandwidthSettings(uploadLimitKBps = 30)), "30 kB/s is fine for one upload")
     }
+
+    @Test
+    fun `staging limit defaults to ten files, round trips and is checked`() {
+        val old = SettingsStore.decode("[concurrency]\nuploads = 2\n").concurrency
+        assertEquals(StagingLimit.FILES, old.stagingLimit, "older files get the default limit")
+        assertEquals(10, old.stagingMaxFiles)
+
+        val s = valid().copy(concurrency = ConcurrencySettings(stagingLimit = StagingLimit.SIZE, stagingMaxMB = 5000))
+        assertEquals(s, SettingsStore.decode(SettingsStore.encode(s)))
+        assertTrue("stagingLimit = \"size\"" in SettingsStore.encode(s))
+
+        fun errors(c: ConcurrencySettings) =
+            SettingsValidator.validate(valid().copy(concurrency = c)).map {
+                it.field to
+                    it.message
+            }
+        assertEquals(emptyList(), errors(ConcurrencySettings(stagingLimit = StagingLimit.NONE, stagingMaxMB = 0)))
+        assertEquals(
+            listOf(
+                "concurrency.stagingMaxFiles" to "Use a number from 1 to 1000",
+                "concurrency.stagingMaxMB" to "Use a size above 0, or choose No limit",
+            ),
+            errors(ConcurrencySettings(stagingLimit = StagingLimit.SIZE, stagingMaxFiles = 0, stagingMaxMB = 0)),
+        )
+    }
 }

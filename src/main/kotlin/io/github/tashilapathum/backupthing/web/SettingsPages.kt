@@ -8,6 +8,7 @@ import io.github.tashilapathum.backupthing.config.DestinationMode
 import io.github.tashilapathum.backupthing.config.MotionPhotoMode
 import io.github.tashilapathum.backupthing.config.ScheduleMode
 import io.github.tashilapathum.backupthing.config.Settings
+import io.github.tashilapathum.backupthing.config.StagingLimit
 import io.github.tashilapathum.backupthing.config.ValidationError
 import io.github.tashilapathum.backupthing.config.VideoBackend
 import io.github.tashilapathum.backupthing.config.WebSettings
@@ -131,7 +132,7 @@ object SettingsPages {
                 "uploads",
                 "Uploads",
                 "gauge",
-                "How many files upload at once, how fast and how much.",
+                "How many files upload at once, how fast, how much, and how many may wait in staging.",
             ) { s, ctx -> uploads(s, ctx) },
             Tab("interface", "Interface", "browser", "How this dashboard is reached.") { s, ctx -> web(s, ctx) },
             Tab("system", "System", "gear-six", "Tools, logging and file locations.") { s, ctx -> system(s, ctx) },
@@ -815,6 +816,7 @@ object SettingsPages {
         value: Int,
         units: List<QuantityUnit>,
         help: String? = null,
+        emptyText: String = "No limit",
     ) = field(ctx, name, labelText, help) { id ->
         val unit = if (value == 0) units.last() else units.last { it.factor <= value }
         div(classes = "quantity") {
@@ -830,7 +832,7 @@ object SettingsPages {
                             .stripTrailingZeros()
                             .toPlainString()
                     }
-                placeholder = "No limit"
+                placeholder = emptyText
                 attributes["inputmode"] = "decimal"
                 attributes["autocomplete"] = "off"
             }
@@ -922,6 +924,45 @@ object SettingsPages {
         p(classes = "help") {
             +"Files that would go over a cap wait for the next day or month. Caps count the size of uploaded "
             +"files. Retries and Proton's small overhead are not included, so leave some headroom."
+        }
+        val cc = s.concurrency
+        segmented(
+            ctx,
+            "concurrency.stagingLimit",
+            "Staging limit",
+            cc.stagingLimit,
+            listOf(
+                StagingLimit.FILES to "Files",
+                StagingLimit.SIZE to "Size",
+                StagingLimit.NONE to "No limit",
+            ),
+            when (cc.stagingLimit) {
+                StagingLimit.FILES -> {
+                    "Compression pauses while this many compressed files wait to upload, so staging can't fill " +
+                        "your disk."
+                }
+
+                StagingLimit.SIZE -> {
+                    "Compression pauses while compressed files waiting to upload take this much space. A single " +
+                        "larger file is still allowed when staging is empty."
+                }
+
+                StagingLimit.NONE -> {
+                    "Everything is compressed as fast as possible. On a slow connection, staging can grow to a " +
+                        "large part of your library."
+                }
+            },
+        )
+        when (cc.stagingLimit) {
+            StagingLimit.FILES -> {
+                number(ctx, "concurrency.stagingMaxFiles", "Files waiting at most", cc.stagingMaxFiles, 1..1000)
+            }
+
+            StagingLimit.SIZE -> {
+                quantity(ctx, "concurrency.stagingMaxMB", "Staging space", cc.stagingMaxMB, CAP_UNITS, emptyText = "")
+            }
+
+            StagingLimit.NONE -> {}
         }
     }
 

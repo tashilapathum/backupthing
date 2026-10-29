@@ -133,6 +133,11 @@ data class ConcurrencySettings(
     val videos: Int = 2,
     val uploads: Int = 1,
     val maxAttempts: Int = 3,
+    /** How much may wait in staging before compression pauses for uploads to catch up. */
+    val stagingLimit: StagingLimit = StagingLimit.FILES,
+    val stagingMaxFiles: Int = 10,
+    /** Used when [stagingLimit] is SIZE. */
+    val stagingMaxMB: Int = 2000,
 ) {
     fun effectivePhotos(): Int =
         if (photos >
@@ -142,6 +147,20 @@ data class ConcurrencySettings(
         } else {
             (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
         }
+}
+
+@Serializable
+enum class StagingLimit {
+    /** At most [ConcurrencySettings.stagingMaxFiles] compressed files wait to upload. */
+    @SerialName("files")
+    FILES,
+
+    /** Compressed files waiting to upload take at most [ConcurrencySettings.stagingMaxMB]. */
+    @SerialName("size")
+    SIZE,
+
+    @SerialName("none")
+    NONE,
 }
 
 @Serializable

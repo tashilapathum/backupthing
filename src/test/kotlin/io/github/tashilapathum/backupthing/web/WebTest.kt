@@ -9,6 +9,7 @@ import io.github.tashilapathum.backupthing.config.ScheduleSettings
 import io.github.tashilapathum.backupthing.config.Settings
 import io.github.tashilapathum.backupthing.config.SettingsStore
 import io.github.tashilapathum.backupthing.config.SourceSettings
+import io.github.tashilapathum.backupthing.config.StagingLimit
 import io.github.tashilapathum.backupthing.config.WebSettings
 import io.github.tashilapathum.backupthing.db.Database
 import io.github.tashilapathum.backupthing.db.MediaStatus
@@ -529,6 +530,43 @@ class WebTest {
             val again = client.get("/settings").bodyAsText()
             assertTrue("value=\"1.5\"" in again, "shown in the largest whole unit")
             assertTrue("Month starts on day" in again, "reset day shows once a monthly cap is set")
+        }
+
+    @Test
+    fun `staging limit switches between files, size and no limit`() =
+        testApplication {
+            app()
+            val client = browser()
+            val token = client.csrf()
+            val page = client.get("/settings?tab=uploads").bodyAsText()
+            assertTrue("Staging limit" in page && "Files waiting at most" in page, "files mode by default")
+
+            val size =
+                client
+                    .postForm(
+                        "/settings/validate",
+                        token,
+                        "concurrency.stagingLimit" to "size",
+                        "concurrency.stagingMaxMB" to "",
+                        "concurrency.stagingMaxMB.unit" to "gb",
+                    ).bodyAsText()
+            assertTrue("Staging space" in size && "Files waiting at most" !in size, "size mode shows the size field")
+            assertTrue("Use a size above 0, or choose No limit" in size, size)
+
+            client.postForm(
+                "/settings",
+                token,
+                "concurrency.stagingLimit" to "size",
+                "concurrency.stagingMaxMB" to "1.5",
+                "concurrency.stagingMaxMB.unit" to "gb",
+            )
+            assertEquals(StagingLimit.SIZE, store.settings.value.concurrency.stagingLimit)
+            assertEquals(1500, store.settings.value.concurrency.stagingMaxMB)
+
+            client.postForm("/settings", token, "concurrency.stagingLimit" to "none")
+            val none = client.get("/settings?tab=uploads").bodyAsText()
+            assertEquals(StagingLimit.NONE, store.settings.value.concurrency.stagingLimit)
+            assertTrue("Staging space" !in none && "Files waiting at most" !in none)
         }
 
     @Test

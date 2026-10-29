@@ -7,6 +7,7 @@ import io.github.tashilapathum.backupthing.config.BandwidthSettings
 import io.github.tashilapathum.backupthing.config.ConcurrencySettings
 import io.github.tashilapathum.backupthing.config.Settings
 import io.github.tashilapathum.backupthing.config.SourceSettings
+import io.github.tashilapathum.backupthing.config.StagingLimit
 import io.github.tashilapathum.backupthing.db.BackupDatabase
 import io.github.tashilapathum.backupthing.db.Database
 import io.github.tashilapathum.backupthing.db.MediaStatus
@@ -227,6 +228,77 @@ class PipelineTest {
                 .executeAsList()
                 .size,
         )
+    }
+
+    private fun staging(
+        limit: StagingLimit,
+        files: Int = 10,
+        maxMB: Int = 2000,
+    ) = settings.copy(
+        concurrency = settings.concurrency.copy(stagingLimit = limit, stagingMaxFiles = files, stagingMaxMB = maxMB),
+    )
+
+    private fun count(status: MediaStatus) =
+        db.mediaQueries
+            .selectByStatus(status)
+            .executeAsList()
+            .size
+
+    @Test
+    fun `staging limit keeps compression from running ahead of slow uploads`() {
+        uploader.latency = kotlin.time.Duration.parse("150ms")
+        val s = run(staging(StagingLimit.FILES, files = 1))
+        assertEquals(RunStatus.SUCCESS, s.status)
+        assertEquals(4, uploader.remote.size)
+        assertEquals(1, encoder.peakStaged.get(), "never more than one compressed file waiting")
+        assertEquals(0, stagedFiles())
+    }
+
+    @Test
+    fun `without a staging limit compression runs ahead`() {
+        uploader.latency = kotlin.time.Duration.parse("150ms")
+        assertEquals(RunStatus.SUCCESS, run(staging(StagingLimit.NONE)).status)
+        assertTrue(encoder.peakStaged.get() > 1, "peak ${encoder.peakStaged.get()}")
+    }
+
+    @Test
+    fun `paused uploads stop compression at the staging limit, the rest waits for the next run`() {
+        uploader.auth = AuthStatus.Failed(FailureKind.AUTH_REQUIRED, "Failed to load session")
+        val limited = staging(StagingLimit.FILES, files = 2)
+        val s = run(limited)
+        assertEquals(RunStatus.AUTH_REQUIRED, s.status)
+        assertEquals(2, stagedFiles())
+        assertTrue(count(MediaStatus.NEW) >= 1)
+        assertTrue(s.message!!.contains(Regex("Staging full: \\d files? waits? for the next run\\.$")), s.message)
+
+        uploader.auth = AuthStatus.Ok
+        assertEquals(RunStatus.SUCCESS, run(limited).status)
+        assertEquals(4, uploader.remote.size)
+        assertEquals(0, stagedFiles())
+    }
+
+    @Test
+    fun `dry run respects the staging limit`() {
+        val s = run(staging(StagingLimit.FILES, files = 2), dryRun = true)
+        assertEquals(RunStatus.SUCCESS, s.status)
+        assertEquals(0, uploader.calls.get())
+        assertEquals(2, stagedFiles())
+        assertTrue(count(MediaStatus.NEW) >= 1)
+        assertTrue(s.message!!.startsWith("dry run. Staging full:"), s.message)
+
+        assertEquals(RunStatus.SUCCESS, run().status)
+        assertEquals(4, uploader.remote.size)
+    }
+
+    @Test
+    fun `size limit lets a file bigger than the limit through on its own`() {
+        bigFiles() // sources of 2 MB, staged copies just over 1 MB
+        uploader.latency = kotlin.time.Duration.parse("50ms")
+        val s = run(staging(StagingLimit.SIZE, maxMB = 1))
+        assertEquals(RunStatus.SUCCESS, s.status)
+        assertEquals(7, uploader.remote.size)
+        val peak = encoder.peakStagedBytes.get()
+        assertTrue(peak in 1_000_000 until 2_000_000, "one big file staged at a time, peak $peak bytes")
     }
 
     @Test

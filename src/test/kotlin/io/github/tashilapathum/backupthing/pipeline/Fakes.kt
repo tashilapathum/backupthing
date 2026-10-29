@@ -14,6 +14,7 @@ import io.github.tashilapathum.backupthing.upload.UploadOutcome
 import io.github.tashilapathum.backupthing.upload.Uploader
 import io.github.tashilapathum.backupthing.util.FileUtil
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -29,6 +30,12 @@ class FakeEncoder(
     val keepOriginal = ConcurrentHashMap.newKeySet<String>()
     var gate: CompletableDeferred<Unit>? = null
     val started = CompletableDeferred<Unit>()
+
+    /** Most compressed files (and bytes) in staging right after an encode wrote its output. */
+    val peakStaged = AtomicInteger()
+    val peakStagedBytes =
+        java.util.concurrent.atomic
+            .AtomicLong()
 
     override suspend fun encode(
         source: Path,
@@ -46,8 +53,27 @@ class FakeEncoder(
         val out = guard.stagedPath(OutputNaming.outputRelPath(relPath, kind))
         val bytes = Files.readAllBytes(source)
         Files.write(out, bytes.copyOf((bytes.size / 2).coerceAtLeast(1)))
+        recordPeak()
         onProgress(1.0)
         return EncodeResult.Encoded(out, Files.size(out), FileUtil.sha256(out), 1, null)
+    }
+
+    /** Uploads delete staged files concurrently, so files may vanish while staging is measured. */
+    private fun recordPeak() {
+        val sizes =
+            runCatching {
+                Files.walk(guard.stagingRoot).use { s ->
+                    s
+                        .filter {
+                            Files.isRegularFile(
+                                it,
+                            )
+                        }.toList()
+                        .mapNotNull { runCatching { Files.size(it) }.getOrNull() }
+                }
+            }.getOrDefault(emptyList())
+        peakStaged.accumulateAndGet(sizes.size, ::maxOf)
+        peakStagedBytes.accumulateAndGet(sizes.sum(), ::maxOf)
     }
 }
 
@@ -57,6 +83,9 @@ class FakeUploader : Uploader {
     val calls = AtomicInteger()
     val script = ConcurrentHashMap<String, ConcurrentLinkedQueue<UploadOutcome>>()
     var auth: AuthStatus = AuthStatus.Ok
+
+    /** How long each upload takes. */
+    var latency: kotlin.time.Duration = kotlin.time.Duration.ZERO
 
     fun failNext(
         name: String,
@@ -77,6 +106,7 @@ class FakeUploader : Uploader {
         relDir: String,
     ): UploadOutcome {
         calls.incrementAndGet()
+        delay(latency)
         val name = local.fileName.toString()
         script[name]?.poll()?.let { return it }
         val key = remotePath(relDir, name)

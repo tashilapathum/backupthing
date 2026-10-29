@@ -89,6 +89,9 @@ class Pipeline(
 
         /** Non-null once uploads are stopped for this run. */
         val paused = AtomicReference<Pair<RunStatus, String>?>(null)
+
+        /** Files left NEW because staging was full and nothing could be uploaded. */
+        val stagingDeferred = AtomicInteger()
     }
 
     /** @param dryRun encode into staging but do not upload (files stay ENCODED). */
@@ -151,8 +154,12 @@ class Pipeline(
                 )
             }
 
+            val gate = StagingGate(settings.concurrency, stagedLeftovers())
             val uploads = Channel<Long>(Channel.UNLIMITED)
-            readyToUpload.forEach { uploads.trySend(it) }
+            readyToUpload.forEach {
+                gate.queued()
+                uploads.trySend(it)
+            }
             val uploadWorkers =
                 launch {
                     repeat(settings.concurrency.uploads) {
@@ -161,6 +168,7 @@ class Pipeline(
                                 try {
                                     uploadOne(id, settings, uploader, budget, c)
                                 } finally {
+                                    gate.uploadSettled(id, stillStaged(id))
                                     settle()
                                 }
                             }
@@ -175,7 +183,13 @@ class Pipeline(
                     launch {
                         val slots = if (row.kind == MediaKind.VIDEO) videoSlots else photoSlots
                         slots.withPermit {
-                            if (encodeOne(row, settings, c)) {
+                            if (!gate.reserve(row.id, row.src_size)) {
+                                c.stagingDeferred.incrementAndGet()
+                                _state.update { it.copy(toEncode = (it.toEncode - 1).coerceAtLeast(0)) }
+                                settle()
+                                return@withPermit
+                            }
+                            if (encodeOne(row, settings, c, gate)) {
                                 _state.update { it.copy(toUpload = it.toUpload + 1) }
                                 uploads.send(row.id)
                             } else {
@@ -197,8 +211,32 @@ class Pipeline(
                     c.capped.get() > 0 -> RunStatus.CAPPED
                     else -> RunStatus.SUCCESS
                 }
-            summarize(runId, c, status, paused?.second ?: capMessage(c))
+            val main = paused?.second ?: capMessage(c)
+            val staging = stagingMessage(c)
+            val message = if (main != null && staging != null) "${main.trimEnd('.')}. $staging" else main ?: staging
+            summarize(runId, c, status, message)
         }
+
+    /** Compressed files from earlier runs still waiting in staging (row id → bytes). */
+    private fun stagedLeftovers(): Map<Long, Long> =
+        q
+            .selectWork(MediaStatus.ENCODED)
+            .executeAsList()
+            .filter { it.upload_original == 0L && Files.exists(stagedFile(it)) }
+            .associate { it.id to (it.out_size ?: Files.size(stagedFile(it))) }
+
+    private fun stillStaged(id: Long): Boolean {
+        val row = q.selectById(id).executeAsOneOrNull() ?: return false
+        return row.status == MediaStatus.ENCODED && row.upload_original == 0L && row.out_rel_path != null &&
+            Files.exists(stagedFile(row))
+    }
+
+    /** "Staging full: 12 files wait for the next run." */
+    private fun stagingMessage(c: Counters): String? {
+        val n = c.stagingDeferred.get()
+        if (n == 0) return null
+        return "Staging full: $n ${if (n == 1) "file waits" else "files wait"} for the next run."
+    }
 
     /** ENCODED rows whose staged file disappeared (cache cleared, crash) are encoded again. */
     private fun requeueMissingStaged() {
@@ -213,10 +251,12 @@ class Pipeline(
         row: Media_file,
         settings: Settings,
         c: Counters,
+        gate: StagingGate,
     ): Boolean {
         val source = sourceFile(row)
         if (!Files.exists(source)) {
             q.revert(MediaStatus.SKIPPED, "source file no longer exists", now(), row.id)
+            gate.encodeFailed(row.id)
             return false
         }
         q.markStatus(MediaStatus.ENCODING, now(), row.id)
@@ -238,6 +278,7 @@ class Pipeline(
                 is EncodeResult.Encoded -> {
                     val rel = guard.stagingRoot.relativize(result.output).toString()
                     q.markEncoded(rel, result.size, result.sha256, result.encodeMs, result.backend?.name, now(), row.id)
+                    gate.encoded(row.id, result.size)
                     c.encoded.incrementAndGet()
                     log.info(
                         "Encoded {} → {} ({}%)",
@@ -249,6 +290,7 @@ class Pipeline(
 
                 is EncodeResult.UseOriginal -> {
                     q.markUseOriginal(0, result.reason, now(), row.id)
+                    gate.encoded(row.id, null)
                     c.keptOriginal.incrementAndGet()
                     log.info("Keeping original for {}: {}", row.rel_path, result.reason)
                 }
@@ -256,8 +298,10 @@ class Pipeline(
             return true
         } catch (e: CancellationException) {
             withContext(NonCancellable) { q.revert(MediaStatus.NEW, null, now(), row.id) }
+            gate.encodeFailed(row.id)
             throw e
         } catch (e: Exception) {
+            gate.encodeFailed(row.id)
             val message = e.message ?: e.javaClass.simpleName
             q.recordFailure(message, now(), settings.concurrency.maxAttempts.toLong(), MediaStatus.NEW.name, row.id)
             reportFailure(row, message, c)

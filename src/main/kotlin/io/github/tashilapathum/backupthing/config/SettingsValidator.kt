@@ -80,6 +80,12 @@ object SettingsValidator {
                 if (videos !in 1..16) add(ValidationError("concurrency.videos", "Use a number from 1 to 16"))
                 if (uploads !in 1..8) add(ValidationError("concurrency.uploads", "Use a number from 1 to 8"))
                 if (maxAttempts !in 1..20) add(ValidationError("concurrency.maxAttempts", "Use a number from 1 to 20"))
+                if (stagingMaxFiles !in 1..1000) {
+                    add(ValidationError("concurrency.stagingMaxFiles", "Use a number from 1 to 1000"))
+                }
+                if (stagingMaxMB < 0 || (stagingLimit == StagingLimit.SIZE && stagingMaxMB == 0)) {
+                    add(ValidationError("concurrency.stagingMaxMB", "Use a size above 0, or choose No limit"))
+                }
             }
             with(settings.bandwidth) {
                 val uploads = settings.concurrency.uploads.coerceAtLeast(1)

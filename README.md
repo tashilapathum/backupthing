@@ -123,10 +123,15 @@ uploadLimitKBps = 2000                # 2 MB/s, shared by all uploads
 dailyCapMB = 0
 monthlyCapMB = 200000                 # 200 GB
 monthResetDay = 1
+
+[concurrency]                         # optional
+stagingLimit = "files"                # or "size" (stagingMaxMB = 2000) or "none"
+stagingMaxFiles = 10
 ```
 
 The state database is `~/.local/share/backupthing/state.db` and staged files go to
-`~/.cache/backupthing/staging/`.
+`~/.cache/backupthing/staging/`. Compression pauses while the staging limit is reached and resumes as
+uploads finish, so a slow connection or paused uploads don't fill your disk.
 
 ## Commands
 

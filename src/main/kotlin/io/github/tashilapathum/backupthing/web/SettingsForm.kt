@@ -14,6 +14,7 @@ import io.github.tashilapathum.backupthing.config.ScheduleSettings
 import io.github.tashilapathum.backupthing.config.Settings
 import io.github.tashilapathum.backupthing.config.SettingsValidator
 import io.github.tashilapathum.backupthing.config.SourceSettings
+import io.github.tashilapathum.backupthing.config.StagingLimit
 import io.github.tashilapathum.backupthing.config.SystemSettings
 import io.github.tashilapathum.backupthing.config.ValidationError
 import io.github.tashilapathum.backupthing.config.VideoBackend
@@ -95,6 +96,9 @@ class SettingsForm(
                         videos = int("concurrency.videos") ?: b.concurrency.videos,
                         uploads = int("concurrency.uploads") ?: b.concurrency.uploads,
                         maxAttempts = int("concurrency.maxAttempts") ?: b.concurrency.maxAttempts,
+                        stagingLimit = enum<StagingLimit>("concurrency.stagingLimit") ?: b.concurrency.stagingLimit,
+                        stagingMaxFiles = int("concurrency.stagingMaxFiles") ?: b.concurrency.stagingMaxFiles,
+                        stagingMaxMB = quantity("concurrency.stagingMaxMB", CAP_UNITS) ?: b.concurrency.stagingMaxMB,
                     ),
                 bandwidth =
                     BandwidthSettings(
