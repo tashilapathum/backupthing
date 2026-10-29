@@ -95,6 +95,14 @@ countByStatus:
 SELECT status, COUNT(*) AS files, SUM(src_size) AS src_bytes, CAST(COALESCE(SUM(out_size), 0) AS INTEGER) AS out_bytes
 FROM media_file GROUP BY status;
 
+-- Backup progress per top-level folder ('' = files directly in the source root).
+coverageByFolder:
+SELECT source_root,
+       CASE WHEN instr(rel_path, '/') > 0 THEN substr(rel_path, 1, instr(rel_path, '/') - 1) ELSE '' END AS folder,
+       status, COUNT(*) AS files, CAST(COALESCE(SUM(src_size), 0) AS INTEGER) AS bytes
+FROM media_file WHERE status != 'SKIPPED'
+GROUP BY source_root, folder, status;
+
 CREATE TABLE run (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at INTEGER NOT NULL,

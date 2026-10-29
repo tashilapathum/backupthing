@@ -8,6 +8,11 @@
 - When uploads can't continue (sign-in needed, offline, upload cap), compression stops once staging is full; the
   remaining files wait for the next run instead of filling the disk. `run --dry-run` respects the limit too.
 
+### Backup progress on the overview
+- The overview card now shows how much of your library is backed up, by size: one bar split into backed up, ready
+  to upload, not compressed yet and failed, with sizes and file counts, plus a bar per top-level folder (or per
+  source folder when you back up several).
+
 ## 0.2.1 - 2026-10-29
 
 ### Fixes

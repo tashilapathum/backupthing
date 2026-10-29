@@ -4,6 +4,9 @@ package io.github.tashilapathum.backupthing.web
 
 import io.github.tashilapathum.backupthing.pipeline.Stage
 import io.github.tashilapathum.backupthing.service.BackupService
+import io.github.tashilapathum.backupthing.service.Coverage
+import io.github.tashilapathum.backupthing.service.CoverageRow
+import io.github.tashilapathum.backupthing.service.Part
 import io.github.tashilapathum.backupthing.web.Icons.icon
 import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
@@ -32,6 +35,7 @@ import kotlinx.html.tr
 import kotlinx.html.ul
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 
 /**
  * Server-rendered overview. Live parts are fragments that htmx re-fetches whenever the server sends an
@@ -308,6 +312,7 @@ object Pages {
 
     private fun FlowContent.totals(s: Snapshot) {
         val t = s.totals
+        coverage(s.coverage)
         div(classes = "saving") {
             val saved = Format.savedPercent(t.doneSourceBytes, t.doneStoredBytes)
             if (saved == null) {
@@ -330,13 +335,93 @@ object Pages {
             }
         }
         dl(classes = "stats") {
-            stat("Backed up", "${t.doneFiles} files")
-            stat("Waiting", "${t.pendingFiles}")
-            stat("Failed", "${t.failedFiles}", bad = t.failedFiles > 0)
             val u = s.usage
             if (u.dailyCap > 0) stat("Today", "${Format.bytes(u.today)} of ${Format.bytes(u.dailyCap)}")
             if (u.monthlyCap > 0) stat("This month", "${Format.bytes(u.thisMonth)} of ${Format.bytes(u.monthlyCap)}")
             stat("Next run", s.nextRun?.let { Format.time(it) } ?: "Manual")
+        }
+    }
+
+    /** How much of the library is backed up: a stacked bar by original size, a legend, and a bar per folder. */
+    private fun FlowContent.coverage(c: Coverage) {
+        val t = c.total
+        div(classes = "coverage") {
+            if (t.total.files == 0L) {
+                p(classes = "empty") { +"Backup progress shows up after the first scan." }
+                return@div
+            }
+            div(classes = "big") { +"${t.percentDone}%" }
+            p(classes = "caption") { +"of your library is backed up" }
+            p(classes = "caption") {
+                b { +Format.bytes(t.done.bytes) }
+                +" of ${Format.bytes(t.total.bytes)}"
+            }
+            coverageBar(t, "Library")
+            dl(classes = "legend") {
+                legendRow("done", "Backed up", t.done)
+                if (t.ready.files > 0) legendRow("ready", "Ready to upload", t.ready)
+                if (t.todo.files > 0) legendRow("todo", "Not compressed yet", t.todo)
+                if (t.failed.files > 0) legendRow("fail", "Failed", t.failed, bad = true)
+            }
+            if (c.folders.isNotEmpty()) {
+                div(classes = "folders") {
+                    attributes["role"] = "list"
+                    attributes["aria-label"] = "By folder"
+                    c.folders.forEach { row ->
+                        div(classes = "row") {
+                            attributes["role"] = "listitem"
+                            div(classes = "lab") {
+                                span {
+                                    attributes["title"] = row.label
+                                    +row.label
+                                }
+                                b { +"${row.percentDone}% of ${Format.bytes(row.total.bytes)}" }
+                            }
+                            coverageBar(row, row.label)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Segments sized by original bytes; hover shows each one's size (the legend has the same numbers). */
+    private fun FlowContent.coverageBar(
+        row: CoverageRow,
+        name: String,
+    ) = div(classes = "cov") {
+        attributes["role"] = "img"
+        attributes["aria-label"] =
+            "$name: ${row.percentDone}% backed up, ${Format.bytes(row.done.bytes)} of ${Format.bytes(row.total.bytes)}"
+        listOf(
+            Triple("done", "Backed up", row.done),
+            Triple("ready", "Ready to upload", row.ready),
+            Triple("todo", "Not compressed yet", row.todo),
+            Triple("fail", "Failed", row.failed),
+        ).filter { it.third.files > 0 }.forEach { (cls, label, part) ->
+            span(classes = "seg $cls") {
+                attributes["style"] = "flex: ${part.bytes.coerceAtLeast(1)} 1 0"
+                attributes["data-tip"] = "$label · ${Format.bytes(part.bytes)}"
+            }
+        }
+    }
+
+    private fun kotlinx.html.DL.legendRow(
+        cls: String,
+        label: String,
+        part: Part,
+        bad: Boolean = false,
+    ) {
+        val list = this
+        div {
+            list.dt {
+                span(classes = "sw $cls") {}
+                +label
+            }
+            list.dd(classes = if (bad) "bad" else null) {
+                +Format.bytes(part.bytes)
+                span(classes = "n") { +" · ${"%,d".format(Locale.ENGLISH, part.files)}" }
+            }
         }
     }
 

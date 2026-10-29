@@ -73,6 +73,9 @@ class Snapshot(
 ) {
     val pipeline = service.pipelineState.value
     val totals = service.totals()
+
+    /** Only the dashboard shows it, so the JSON API and Waybar don't pay for the query. */
+    val coverage by lazy { service.coverage() }
     val warnings = service.warnings.value
     val nextRun = service.nextRun.value
     val lastRun = service.recentRuns(1).firstOrNull()

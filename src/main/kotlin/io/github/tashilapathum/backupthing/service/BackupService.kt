@@ -275,6 +275,21 @@ class BackupService(
         )
     }
 
+    /** How much of the configured sources is backed up, in total and per folder. */
+    fun coverage(): Coverage =
+        Coverage.from(
+            q.coverageByFolder().executeAsList().map {
+                Bucket(
+                    it.source_root,
+                    it.folder,
+                    it.status,
+                    it.files,
+                    it.bytes,
+                )
+            },
+            settings.sources.roots,
+        )
+
     /** Recently scanned photos/videos, newest first (for the sample picker). */
     fun recentSources(limit: Long): List<java.nio.file.Path> =
         q.recentSources(limit).executeAsList().map {

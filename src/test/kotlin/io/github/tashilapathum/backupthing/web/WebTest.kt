@@ -176,6 +176,29 @@ class WebTest {
         }
 
     @Test
+    fun `overview shows how much of the library is backed up, per folder`() =
+        testApplication {
+            app()
+            val client = browser()
+            val empty = client.get("/fragments/totals").bodyAsText()
+            assertTrue("Backup progress shows up after the first scan." in empty, empty)
+
+            runBlocking { service.runOnce("test") }
+            val done = client.get("/fragments/totals").bodyAsText()
+            assertTrue("<div class=\"big\">100%</div>" in done && "of your library is backed up" in done, done)
+            assertTrue("class=\"cov\" role=\"img\"" in done)
+            assertTrue(">Vids<" in done && ">Pics<" in done, "a row per top-level folder")
+            assertFalse("<dt>Waiting</dt>" in done, "counts moved into the legend")
+
+            val q = db.mediaQueries
+            q.markStatus(MediaStatus.FAILED, 1, q.selectByPath(source.toString(), "Pics/v.mp4").executeAsOne().id)
+            val partial = client.get("/fragments/totals").bodyAsText()
+            assertTrue("Failed" in partial && "class=\"bad\"" in partial, partial)
+            assertFalse("<div class=\"big\">100%</div>" in partial, "the library is no longer fully backed up")
+            assertTrue("100% of" in partial, "the Vids folder still is")
+        }
+
+    @Test
     fun `failed files show up and can be retried`() =
         testApplication {
             app()
