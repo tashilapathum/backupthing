@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 - 2026-10-29
 
 ### Fixes
 - systemd unit: `BACKUPTHING_OPTS` is quoted, so `-XX:+UseSerialGC` reaches the JVM instead of systemd logging
