@@ -18,7 +18,7 @@ ExecStart=/usr/bin/backupthing serve
 # The JVM exits with 143 after a clean SIGTERM shutdown.
 SuccessExitStatus=143
 # A small heap is plenty: encoding happens in ffmpeg/avifenc, not in the JVM.
-Environment=BACKUPTHING_OPTS=-Xmx256m -XX:+UseSerialGC
+Environment="BACKUPTHING_OPTS=-Xmx256m -XX:+UseSerialGC"
 Restart=on-failure
 RestartSec=30
 # Encoding is heavy; keep the desktop responsive.

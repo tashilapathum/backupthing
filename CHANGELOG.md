@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- systemd unit: `BACKUPTHING_OPTS` is quoted, so `-XX:+UseSerialGC` reaches the JVM instead of systemd logging
+  "Invalid environment assignment" and dropping it.
+
 ## 0.2.0 - 2026-10-29
 
 First public release.
