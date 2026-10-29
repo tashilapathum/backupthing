@@ -1,6 +1,6 @@
 # Maintainer: Tashila Pathum <tashila.pathum@gmail.com>
 #
-# Packages the release tarball. After tagging a release, run `updpkgsums` to fill in the checksum.
+# Packages the release tarball. Updated per release with scripts/aur-release.sh in the upstream repo.
 pkgname=backupthing-bin
 _name=backupthing
 pkgver=0.2.0
@@ -14,7 +14,7 @@ optdepends=('waybar: status bar module (snippet in /usr/share/backupthing/waybar
 provides=("$_name")
 conflicts=("$_name")
 source=("$url/releases/download/v$pkgver/$_name-$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('6c24b756b0455330df1928da580996a3f3acd9bbf57e349f65526b29daea9df9')
 
 package() {
   cd "$_name-$pkgver"
