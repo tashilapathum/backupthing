@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 - 2026-10-30
 
 ### Fixes
 - After a package upgrade (e.g. `yay`), the running service kept serving from the removed old version and the

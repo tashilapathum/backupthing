@@ -53,9 +53,9 @@ Nothing is ever deleted from Proton Drive, and nothing outside the staging folde
 [releases page](https://github.com/tashilapathum/backupthing/releases), then check, unpack and install:
 
 ```sh
-sha256sum -c backupthing-0.3.0.tar.gz.sha256
-tar -xzf backupthing-0.3.0.tar.gz
-./backupthing-0.3.0/install.sh
+sha256sum -c backupthing-0.3.1.tar.gz.sha256
+tar -xzf backupthing-0.3.1.tar.gz
+./backupthing-0.3.1/install.sh
 ```
 
 The installer needs no root. It puts Backupthing in `~/.local/opt` with the `backupthing` command in
