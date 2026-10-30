@@ -35,6 +35,7 @@ import io.github.tashilapathum.backupthing.safety.PathGuard
 import io.github.tashilapathum.backupthing.scan.Scanner
 import io.github.tashilapathum.backupthing.scan.SourceUnavailableException
 import io.github.tashilapathum.backupthing.service.BackupService
+import io.github.tashilapathum.backupthing.service.InstallWatch
 import io.github.tashilapathum.backupthing.service.ProductionEnvironment
 import io.github.tashilapathum.backupthing.upload.AuthStatus
 import io.github.tashilapathum.backupthing.upload.Uploaders
@@ -47,6 +48,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.seconds
 
 class AppContext(
@@ -318,6 +320,10 @@ class ServeCommand : CliktCommand(name = "serve") {
         val server = startServer(service, web.bindAddress, web.port, { app.store.isConfigured }, app.store::save)
         echo("Dashboard: ${web.dashboardUrl}")
         if (!app.store.isConfigured) echo("No configuration yet. Open the dashboard to set up.")
+        // exitProcess runs the shutdown hook below, so a run in progress is stopped and recorded as usual.
+        InstallWatch.installedJar()?.let { jar ->
+            InstallWatch(jar) { exitProcess(InstallWatch.EXIT_REINSTALLED) }.start()
+        }
         val stopped = java.util.concurrent.CountDownLatch(1)
         Runtime.getRuntime().addShutdownHook(
             Thread {

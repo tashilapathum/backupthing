@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- After a package upgrade (e.g. `yay`), the running service kept serving from the removed old version and the
+  dashboard lost its styling until restarted. It now notices within a minute and exits, so systemd restarts it on
+  the new version.
+
 ## 0.3.0 - 2026-10-30
 
 ### Staging limit
